@@ -1,46 +1,173 @@
 // ==========================================================================
-// Pokémon Pokedex (PokéVerse) Core JavaScript
+// Pokémon Pokedex (PokéVerse) Core JavaScript - Binance Redesign & I18n
 // ==========================================================================
 
 // Global App State
-let pokemonList = [];      // Raw loaded list from pokemon_names.json
-let filteredList = [];     // List after applying search, type, and gen filters
-let loadedCount = 24;      // Number of currently rendered cards (pagination)
-const itemsPerPage = 24;   // Load count step size
+let pokemonList = [];           // Raw loaded list from pokemon_names.json
+let filteredList = [];          // List after applying search, type, and gen filters
+let loadedCount = 24;           // Number of currently rendered cards
+const itemsPerPage = 24;
 const detailsCache = new Map(); // Cache for detailed Pokemon data (modal)
-let activePokemonId = null; // Currently selected pokemon in modal
-let currentAudio = null;    // Active Audio instance playing cry
+let activePokemonId = null;      // Currently selected pokemon in modal
+let currentAudio = null;         // Active Audio instance playing cry
+let currentLang = "ko";          // UI Language state: "ko" or "en"
+
+// Translation Dictionary
+const TRANSLATIONS = {
+  ko: {
+    title: "PokéVerse - 바이낸스 스타일 포켓몬 도감",
+    registeredLabel: "등록됨",
+    searchPlaceholder: "이름 또는 도감 번호 검색...",
+    allTypes: "모든 타입",
+    allGens: "모든 세대",
+    sortIdAsc: "번호 순 (오름차순)",
+    sortIdDesc: "번호 순 (내림차순)",
+    sortNameAsc: "이름 순 (ㄱ-ㅎ)",
+    sortNameDesc: "이름 순 (ㅎ-ㄱ)",
+    genLabels: {
+      all: "모든 세대",
+      1: "제1세대 (관동)",
+      2: "제2세대 (성도)",
+      3: "제3세대 (호연)",
+      4: "제4세대 (신오)",
+      5: "제5세대 (하나)",
+      6: "제6세대 (칼로스)",
+      7: "제7세대 (알로라)",
+      8: "제8세대 (가라르)",
+      9: "제9세대 (팔데아)"
+    },
+    loading: "포켓몬 데이터를 불러오는 중...",
+    noResultsTitle: "검색 결과가 없습니다.",
+    noResultsDesc: "이름이나 도감 번호를 올바르게 입력했는지 확인해 주세요.",
+    resetFilters: "필터 초기화",
+    height: "키 (Height)",
+    weight: "몸무게 (Weight)",
+    abilities: "특성 (Abilities)",
+    baseStats: "기본 능력치 (Base Stats)",
+    evolutionChain: "진화 과정 (Evolution Chain)",
+    prevBtn: "이전 포켓몬",
+    cryBtn: "울음소리 듣기",
+    closeBtn: "닫기",
+    evoTrigger: {
+      level: "Lv.",
+      item: "도구",
+      happiness: "친밀도",
+      timeDay: "낮",
+      timeNight: "밤",
+      location: "특정 장소",
+      move: "기술 습득",
+      evolve: "진화"
+    }
+  },
+  en: {
+    title: "PokéVerse - Binance Style Pokédex",
+    registeredLabel: "Registered",
+    searchPlaceholder: "Search name or ID...",
+    allTypes: "All Types",
+    allGens: "All Generations",
+    sortIdAsc: "ID (Ascending)",
+    sortIdDesc: "ID (Descending)",
+    sortNameAsc: "Name (A-Z)",
+    sortNameDesc: "Name (Z-A)",
+    genLabels: {
+      all: "All Generations",
+      1: "Gen I (Kanto)",
+      2: "Gen II (Johto)",
+      3: "Gen III (Hoenn)",
+      4: "Gen IV (Sinnoh)",
+      5: "Gen V (Unova)",
+      6: "Gen VI (Kalos)",
+      7: "Gen VII (Alola)",
+      8: "Gen VIII (Galar)",
+      9: "Gen IX (Paldea)"
+    },
+    loading: "Loading Pokémon data...",
+    noResultsTitle: "No results found.",
+    noResultsDesc: "Please check if you entered the name or ID correctly.",
+    resetFilters: "Reset Filters",
+    height: "Height",
+    weight: "Weight",
+    abilities: "Abilities",
+    baseStats: "Base Stats",
+    evolutionChain: "Evolution Chain",
+    prevBtn: "Previous Pokémon",
+    cryBtn: "Play Cry Sound",
+    closeBtn: "Close",
+    evoTrigger: {
+      level: "Lv.",
+      item: "Item",
+      happiness: "Happiness",
+      timeDay: "Day",
+      timeNight: "Night",
+      location: "Location",
+      move: "Learn Move",
+      evolve: "Evolve"
+    }
+  }
+};
 
 // PokeAPI Type Translation and Icons mapping
 const TYPE_DETAILS = {
-  normal: { ko: "노말", icon: "ph ph-circle" },
-  fire: { ko: "불꽃", icon: "ph ph-flame" },
-  water: { ko: "물", icon: "ph ph-drop" },
-  electric: { ko: "전기", icon: "ph ph-lightning" },
-  grass: { ko: "풀", icon: "ph ph-leaf" },
-  ice: { ko: "얼음", icon: "ph ph-snowflake" },
-  fighting: { ko: "격투", icon: "ph ph-sword" },
-  poison: { ko: "독", icon: "ph ph-skull" },
-  ground: { ko: "땅", icon: "ph ph-mountains" },
-  flying: { ko: "비행", icon: "ph ph-wind" },
-  psychic: { ko: "에스퍼", icon: "ph ph-eye" },
-  bug: { ko: "벌레", icon: "ph ph-bug" },
-  rock: { ko: "바위", icon: "ph ph-diamond" },
-  ghost: { ko: "고스트", icon: "ph ph-ghost" },
-  dragon: { ko: "드래곤", icon: "ph ph-dragon" },
-  dark: { ko: "악", icon: "ph ph-moon" },
-  steel: { ko: "강철", icon: "ph ph-nut" },
-  fairy: { ko: "페어리", icon: "ph ph-sparkles" }
+  normal: { ko: "노말", en: "Normal", icon: "ph ph-circle" },
+  fire: { ko: "불꽃", en: "Fire", icon: "ph ph-flame" },
+  water: { ko: "물", en: "Water", icon: "ph ph-drop" },
+  electric: { ko: "전기", en: "Electric", icon: "ph ph-lightning" },
+  grass: { ko: "풀", en: "Grass", icon: "ph ph-leaf" },
+  ice: { ko: "얼음", en: "Ice", icon: "ph ph-snowflake" },
+  fighting: { ko: "격투", en: "Fighting", icon: "ph ph-sword" },
+  poison: { ko: "독", en: "Poison", icon: "ph ph-skull" },
+  ground: { ko: "땅", en: "Ground", icon: "ph ph-mountains" },
+  flying: { ko: "비행", en: "Flying", icon: "ph ph-wind" },
+  psychic: { ko: "에스퍼", en: "Psychic", icon: "ph ph-eye" },
+  bug: { ko: "벌레", en: "Bug", icon: "ph ph-bug" },
+  rock: { ko: "바위", en: "Rock", icon: "ph ph-diamond" },
+  ghost: { ko: "고스트", en: "Ghost", icon: "ph ph-ghost" },
+  dragon: { ko: "드래곤", en: "Dragon", icon: "ph ph-dragon" },
+  dark: { ko: "악", en: "Dark", icon: "ph ph-moon" },
+  steel: { ko: "강철", en: "Steel", icon: "ph ph-nut" },
+  fairy: { ko: "페어리", en: "Fairy", icon: "ph ph-sparkles" }
 };
 
 // Stat Label translations
 const STAT_TRANSLATIONS = {
-  hp: "HP",
-  attack: "공격",
-  defense: "방어",
-  "special-attack": "특공",
-  "special-defense": "특방",
-  speed: "스피드"
+  ko: {
+    hp: "HP",
+    attack: "공격",
+    defense: "방어",
+    "special-attack": "특공",
+    "special-defense": "특방",
+    speed: "스피드"
+  },
+  en: {
+    hp: "HP",
+    attack: "ATK",
+    defense: "DEF",
+    "special-attack": "SP. ATK",
+    "special-defense": "SP. DEF",
+    speed: "SPD"
+  }
+};
+
+// HSL mappings for Type Badge calculations (retaining HSL values in JS code)
+const TYPE_HSL_MAP = {
+  normal: "208, 9%, 60%",
+  fire: "11, 100%, 60%",
+  water: "210, 95%, 58%",
+  electric: "48, 100%, 54%",
+  grass: "156, 76%, 47%",
+  ice: "182, 100%, 65%",
+  fighting: "355, 80%, 53%",
+  poison: "284, 63%, 58%",
+  ground: "33, 75%, 60%",
+  flying: "228, 100%, 78%",
+  psychic: "340, 100%, 65%",
+  bug: "76, 77%, 40%",
+  rock: "45, 45%, 57%",
+  ghost: "253, 50%, 56%",
+  dragon: "248, 100%, 61%",
+  dark: "220, 13%, 31%",
+  steel: "196, 36%, 57%",
+  fairy: "332, 100%, 73%"
 };
 
 // DOM Elements
@@ -97,6 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function initApp() {
   renderSkeletons();
+  setupLanguageListeners();
   setupDropdownListeners();
   setupSearchListeners();
   setupInfiniteScroll();
@@ -109,10 +237,18 @@ async function initApp() {
     pokemonList = await response.json();
     registeredCountSpan.textContent = pokemonList.length;
     
-    // Build Type Dropdown Menu dynamically
-    buildTypeDropdown();
+    // Set HSL CSS variables for badge colors dynamically
+    Object.keys(TYPE_HSL_MAP).forEach(key => {
+      document.documentElement.style.setProperty(`--type-${key}-hsl`, TYPE_HSL_MAP[key]);
+    });
     
-    // Apply initial filtering and rendering
+    // Translate structural UI elements and generate language-specific lists
+    translateUI();
+    buildTypeDropdown();
+    buildGenerationDropdown();
+    buildSortingDropdown();
+    
+    // Apply filters and start grid render
     applyFilters();
   } catch (err) {
     console.error("Initialization error:", err);
@@ -125,7 +261,7 @@ function renderSkeletons() {
   pokedexGrid.innerHTML = "";
   for (let i = 0; i < itemsPerPage; i++) {
     const skeleton = document.createElement("div");
-    skeleton.className = "skeleton-card glass-panel";
+    skeleton.className = "skeleton-card";
     skeleton.innerHTML = `
       <div class="skeleton-element skeleton-id"></div>
       <div class="skeleton-element skeleton-img"></div>
@@ -136,23 +272,103 @@ function renderSkeletons() {
   }
 }
 
-// Build type list options inside dropdown menu
+// ==========================================================================
+// Language Switching (I18n Translation Layer)
+// ==========================================================================
+function setupLanguageListeners() {
+  const koBtn = document.getElementById("lang-ko-btn");
+  const enBtn = document.getElementById("lang-en-btn");
+
+  koBtn.addEventListener("click", () => {
+    if (currentLang === "ko") return;
+    currentLang = "ko";
+    koBtn.classList.add("active");
+    enBtn.classList.remove("active");
+    handleLanguageChange();
+  });
+
+  enBtn.addEventListener("click", () => {
+    if (currentLang === "en") return;
+    currentLang = "en";
+    enBtn.classList.add("active");
+    koBtn.classList.remove("active");
+    handleLanguageChange();
+  });
+}
+
+function handleLanguageChange() {
+  // 1. Translate UI static elements
+  translateUI();
+  
+  // 2. Re-create generation and sorting dropdown items in current language
+  buildTypeDropdown();
+  buildGenerationDropdown();
+  buildSortingDropdown();
+  
+  // 3. Re-render grids
+  applyFilters();
+
+  // 4. Re-open detail modal if currently displayed
+  if (activePokemonId !== null) {
+    openDetailModal(activePokemonId);
+  }
+}
+
+function translateUI() {
+  const trans = TRANSLATIONS[currentLang];
+  
+  // Document title
+  document.title = trans.title;
+  
+  // Header Elements
+  document.getElementById("registered-label").textContent = trans.registeredLabel;
+  
+  // Search Input placeholder
+  searchInput.placeholder = trans.searchPlaceholder;
+  
+  // Loader Text
+  document.getElementById("loader-text").textContent = trans.loading;
+  
+  // No Results Elements
+  document.getElementById("no-results-title").textContent = trans.noResultsTitle;
+  document.getElementById("no-results-desc").textContent = trans.noResultsDesc;
+  document.getElementById("reset-filters-btn").textContent = trans.resetFilters;
+
+  // Modal static labels
+  document.getElementById("modal-height-label").textContent = trans.height;
+  document.getElementById("modal-weight-label").textContent = trans.weight;
+  document.getElementById("modal-abilities-label").textContent = trans.abilities;
+  document.getElementById("modal-stats-title").innerHTML = `<i class="ph ph-chart-bar"></i> ${trans.baseStats}`;
+  document.getElementById("modal-evolution-title").innerHTML = `<i class="ph ph-tree-structure"></i> ${trans.evolutionChain}`;
+  
+  // Modal nav tips
+  modalPrevBtn.title = trans.prevBtn;
+  modalCryBtn.title = trans.cryBtn;
+  modalCloseBtn.title = trans.closeBtn;
+}
+
+// Build type list options inside dropdown menu dynamically
 function buildTypeDropdown() {
   const menu = dropdowns.type.menu;
-  menu.innerHTML = `<div class="dropdown-item active" data-type="all">
-    <i class="ph ph-sparkles"></i> 모든 타입
+  const trans = TRANSLATIONS[currentLang];
+  
+  const currentVal = dropdowns.type.value;
+  
+  menu.innerHTML = `<div class="dropdown-item ${currentVal === "all" ? "active" : ""}" data-type="all">
+    <i class="ph ph-sparkles"></i> ${trans.allTypes}
   </div>`;
   
   Object.keys(TYPE_DETAILS).forEach(key => {
     const type = TYPE_DETAILS[key];
+    const isActive = currentVal === key;
     const item = document.createElement("div");
-    item.className = "dropdown-item";
+    item.className = `dropdown-item ${isActive ? "active" : ""}`;
     item.setAttribute("data-type", key);
-    item.innerHTML = `<i class="${type.icon}"></i> ${type.ko}`;
+    item.innerHTML = `<i class="${type.icon}"></i> ${type[currentLang]}`;
     menu.appendChild(item);
   });
 
-  // Re-attach listeners to newly created items
+  // Attach dropdown select listeners
   menu.querySelectorAll(".dropdown-item").forEach(item => {
     item.addEventListener("click", (e) => {
       const selectedItem = e.currentTarget;
@@ -168,6 +384,95 @@ function buildTypeDropdown() {
       applyFilters();
     });
   });
+  
+  // Set current selected text in button
+  const currentSelected = menu.querySelector(".dropdown-item.active");
+  if (currentSelected) {
+    dropdowns.type.btn.querySelector(".btn-content").innerHTML = currentSelected.innerHTML;
+  }
+}
+
+function buildGenerationDropdown() {
+  const menu = dropdowns.gen.menu;
+  const trans = TRANSLATIONS[currentLang];
+  const currentVal = dropdowns.gen.value;
+  
+  menu.innerHTML = "";
+  Object.keys(trans.genLabels).forEach(key => {
+    const item = document.createElement("div");
+    const isActive = currentVal === key;
+    item.className = `dropdown-item ${isActive ? "active" : ""}`;
+    item.setAttribute("data-gen", key);
+    item.textContent = trans.genLabels[key];
+    menu.appendChild(item);
+  });
+
+  // Attach select listeners
+  menu.querySelectorAll(".dropdown-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      const selectedItem = e.currentTarget;
+      menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
+      selectedItem.classList.add("active");
+      
+      dropdowns.gen.value = selectedItem.getAttribute("data-gen");
+      dropdowns.gen.btn.querySelector(".btn-content").innerHTML = selectedItem.innerHTML;
+      
+      menu.classList.add("hidden");
+      dropdowns.gen.btn.classList.remove("active");
+      
+      applyFilters();
+    });
+  });
+
+  const currentSelected = menu.querySelector(".dropdown-item.active");
+  if (currentSelected) {
+    dropdowns.gen.btn.querySelector(".btn-content").innerHTML = currentSelected.innerHTML;
+  }
+}
+
+function buildSortingDropdown() {
+  const menu = dropdowns.sort.menu;
+  const trans = TRANSLATIONS[currentLang];
+  const currentVal = dropdowns.sort.value;
+
+  menu.innerHTML = "";
+  const items = [
+    { key: "id-asc", label: trans.sortIdAsc, icon: "ph ph-sort-ascending" },
+    { key: "id-desc", label: trans.sortIdDesc, icon: "ph ph-sort-descending" },
+    { key: "name-asc", label: trans.sortNameAsc, icon: "ph ph-sort-ascending" },
+    { key: "name-desc", label: trans.sortNameDesc, icon: "ph ph-sort-descending" }
+  ];
+
+  items.forEach(item => {
+    const div = document.createElement("div");
+    const isActive = currentVal === item.key;
+    div.className = `dropdown-item ${isActive ? "active" : ""}`;
+    div.setAttribute("data-sort", item.key);
+    div.innerHTML = `<i class="${item.icon}"></i> ${item.label}`;
+    menu.appendChild(div);
+  });
+
+  // Attach click listener
+  menu.querySelectorAll(".dropdown-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      const selectedItem = e.currentTarget;
+      menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
+      selectedItem.classList.add("active");
+      
+      dropdowns.sort.value = selectedItem.getAttribute("data-sort");
+      dropdowns.sort.btn.querySelector(".btn-content").innerHTML = selectedItem.innerHTML;
+      
+      menu.classList.add("hidden");
+      dropdowns.sort.btn.classList.remove("active");
+      
+      applyFilters();
+    });
+  });
+
+  const currentSelected = menu.querySelector(".dropdown-item.active");
+  if (currentSelected) {
+    dropdowns.sort.btn.querySelector(".btn-content").innerHTML = currentSelected.innerHTML;
+  }
 }
 
 // ==========================================================================
@@ -199,39 +504,6 @@ function setupDropdownListeners() {
     });
   });
 
-  // Listen for items in Generation and Sorting dropdowns (which are static in HTML)
-  dropdowns.gen.menu.querySelectorAll(".dropdown-item").forEach(item => {
-    item.addEventListener("click", (e) => {
-      const selectedItem = e.currentTarget;
-      dropdowns.gen.menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
-      selectedItem.classList.add("active");
-      
-      dropdowns.gen.value = selectedItem.getAttribute("data-gen");
-      dropdowns.gen.btn.querySelector(".btn-content").innerHTML = selectedItem.innerHTML;
-      
-      dropdowns.gen.menu.classList.add("hidden");
-      dropdowns.gen.btn.classList.remove("active");
-      
-      applyFilters();
-    });
-  });
-
-  dropdowns.sort.menu.querySelectorAll(".dropdown-item").forEach(item => {
-    item.addEventListener("click", (e) => {
-      const selectedItem = e.currentTarget;
-      dropdowns.sort.menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
-      selectedItem.classList.add("active");
-      
-      dropdowns.sort.value = selectedItem.getAttribute("data-sort");
-      dropdowns.sort.btn.querySelector(".btn-content").innerHTML = selectedItem.innerHTML;
-      
-      dropdowns.sort.menu.classList.add("hidden");
-      dropdowns.sort.btn.classList.remove("active");
-      
-      applyFilters();
-    });
-  });
-
   // Reset Filters Button
   resetFiltersBtn.addEventListener("click", resetAllFilters);
 }
@@ -240,26 +512,14 @@ function resetAllFilters() {
   searchInput.value = "";
   clearSearchBtn.classList.add("hidden");
   
-  // Reset Type Filter
+  // Reset values and active states in dropdowns
   dropdowns.type.value = "all";
-  const typeAllItem = dropdowns.type.menu.querySelector('[data-type="all"]');
-  dropdowns.type.menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
-  if (typeAllItem) typeAllItem.classList.add("active");
-  dropdowns.type.btn.querySelector(".btn-content").innerHTML = `<i class="ph ph-sparkles"></i> 모든 타입`;
-
-  // Reset Gen Filter
   dropdowns.gen.value = "all";
-  const genAllItem = dropdowns.gen.menu.querySelector('[data-gen="all"]');
-  dropdowns.gen.menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
-  if (genAllItem) genAllItem.classList.add("active");
-  dropdowns.gen.btn.querySelector(".btn-content").innerHTML = `<i class="ph ph-globe-hemisphere-east"></i> 모든 세대`;
-
-  // Reset Sort Filter
   dropdowns.sort.value = "id-asc";
-  const sortAscItem = dropdowns.sort.menu.querySelector('[data-sort="id-asc"]');
-  dropdowns.sort.menu.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("active"));
-  if (sortAscItem) sortAscItem.classList.add("active");
-  dropdowns.sort.btn.querySelector(".btn-content").innerHTML = `<i class="ph ph-sort-ascending"></i> 번호 순 (오름차순)`;
+
+  buildTypeDropdown();
+  buildGenerationDropdown();
+  buildSortingDropdown();
 
   applyFilters();
 }
@@ -308,15 +568,23 @@ function applyFilters() {
     return matchesQuery && matchesType && matchesGen;
   });
 
-  // 4. Sort results
+  // 4. Sort results (Name sorting respects Korean locale or English A-Z)
   if (sortFilter === "id-asc") {
     filteredList.sort((a, b) => a.id - b.id);
   } else if (sortFilter === "id-desc") {
     filteredList.sort((a, b) => b.id - a.id);
   } else if (sortFilter === "name-asc") {
-    filteredList.sort((a, b) => a.ko.localeCompare(b.ko, 'ko'));
+    if (currentLang === "ko") {
+      filteredList.sort((a, b) => a.ko.localeCompare(b.ko, 'ko'));
+    } else {
+      filteredList.sort((a, b) => a.en.localeCompare(b.en, 'en'));
+    }
   } else if (sortFilter === "name-desc") {
-    filteredList.sort((a, b) => b.ko.localeCompare(a.ko, 'ko'));
+    if (currentLang === "ko") {
+      filteredList.sort((a, b) => b.ko.localeCompare(a.ko, 'ko'));
+    } else {
+      filteredList.sort((a, b) => b.en.localeCompare(a.en, 'en'));
+    }
   }
 
   // Reset pagination
@@ -344,39 +612,29 @@ function renderGrid(append = false) {
   for (let i = startIdx; i < endIdx; i++) {
     const pokemon = filteredList[i];
     const card = document.createElement("div");
-    
-    // Dominant type mapping for dynamic glows
-    const primaryType = pokemon.types[0];
-    card.className = "pokemon-card glass-panel";
+    card.className = "pokemon-card";
     card.setAttribute("data-id", pokemon.id);
-    card.style.setProperty('--card-glow-color', `hsl(var(--type-${primaryType}-hsl))`);
-    
-    // Add custom style for card hover glows
-    card.addEventListener("mouseenter", () => {
-      card.style.boxShadow = `0 12px 28px rgba(0, 0, 0, 0.4), 0 0 18px rgba(var(--type-${primaryType}-hsl), 0.25)`;
-      card.style.borderColor = `rgba(var(--type-${primaryType}-hsl), 0.4)`;
-    });
-    card.addEventListener("mouseleave", () => {
-      card.style.boxShadow = '';
-      card.style.borderColor = '';
-    });
 
     const paddedId = pokemon.id.toString().padStart(4, "0");
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
 
-    // Type Badge Elements
+    // Type Badge Elements with language lookup
     const badgesHtml = pokemon.types.map(type => {
-      const typeInfo = TYPE_DETAILS[type] || { ko: type, icon: "ph ph-sparkles" };
-      return `<span class="type-badge type-${type}"><i class="${typeInfo.icon}"></i> ${typeInfo.ko}</span>`;
+      const typeInfo = TYPE_DETAILS[type] || { ko: type, en: type, icon: "ph ph-sparkles" };
+      const translatedTypeName = typeInfo[currentLang];
+      return `<span class="type-badge type-${type}"><i class="${typeInfo.icon}"></i> ${translatedTypeName}</span>`;
     }).join("");
+
+    // Use name based on language
+    const currentName = pokemon[currentLang];
 
     card.innerHTML = `
       <span class="card-id">#${paddedId}</span>
       <div class="card-img-wrapper">
-        <div class="card-img-bg" style="background-color: hsl(var(--type-${primaryType}-hsl))"></div>
-        <img src="${imageUrl}" alt="${pokemon.ko}" class="card-img" loading="lazy">
+        <div class="card-img-bg"></div>
+        <img src="${imageUrl}" alt="${currentName}" class="card-img" loading="lazy">
       </div>
-      <h3 class="card-name">${pokemon.ko}</h3>
+      <h3 class="card-name">${currentName}</h3>
       <div class="card-types">
         ${badgesHtml}
       </div>
@@ -402,18 +660,18 @@ function setupInfiniteScroll() {
     if (scrollTop + clientHeight >= scrollHeight - 150) {
       loader.classList.remove("hidden");
       
-      // Artificial delay for premium loading flow
+      // Short delay for loading state rendering
       setTimeout(() => {
         loadedCount += itemsPerPage;
         renderGrid(true);
         loader.classList.add("hidden");
-      }, 350);
+      }, 250);
     }
   });
 }
 
 // ==========================================================================
-// Immersive Details Modal
+// Immersive Details Modal (Binance Style)
 // ==========================================================================
 function setupModalListeners() {
   modalCloseBtn.addEventListener("click", closeDetailModal);
@@ -423,7 +681,7 @@ function setupModalListeners() {
     if (e.target === modal) closeDetailModal();
   });
 
-  // Prev Pokemon Button
+  // Prev/Next Nav buttons inside modal (Next support added for premium detail paging)
   modalPrevBtn.addEventListener("click", () => {
     const currentIndex = filteredList.findIndex(p => p.id === activePokemonId);
     if (currentIndex > 0) {
@@ -431,7 +689,7 @@ function setupModalListeners() {
     }
   });
 
-  // Speaker Cry Audio Button
+  // Play Cry Audio
   modalCryBtn.addEventListener("click", playPokemonCry);
 }
 
@@ -462,32 +720,34 @@ async function openDetailModal(id) {
   // Pre-fill card metadata from our preloaded pokemonList
   const pokemonInfo = pokemonList.find(p => p.id === id);
   const paddedId = id.toString().padStart(4, "0");
+  const currentName = pokemonInfo ? pokemonInfo[currentLang] : `Pokémon #${paddedId}`;
   
   modalPokemonId.textContent = `#${paddedId}`;
-  modalPokemonName.textContent = pokemonInfo ? pokemonInfo.ko : `포켓몬 #${paddedId}`;
+  modalPokemonName.textContent = currentName;
   
-  // Set images & type glows instantly
   const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
   modalPokemonImg.src = imageUrl;
   
-  const primaryType = pokemonInfo ? pokemonInfo.types[0] : "normal";
-  modalGlowLayer.style.background = `radial-gradient(circle, rgba(var(--type-${primaryType}-hsl), 0.45) 0%, rgba(var(--type-${primaryType}-hsl), 0) 70%)`;
-  
-  // Render loading states for dynamic data fields
+  // Loading animations for detailed values
   modalPokemonTypes.innerHTML = '<span class="skeleton-element skeleton-types"></span>';
-  modalPokemonDesc.textContent = "도감 설명을 불러오는 중입니다...";
+  modalPokemonDesc.textContent = currentLang === "ko" ? "도감 설명을 불러오는 중입니다..." : "Loading Pokémon descriptions...";
   modalPokemonHeight.textContent = "-- m";
   modalPokemonWeight.textContent = "-- kg";
-  modalPokemonAbilities.textContent = "불러오는 중...";
+  modalPokemonAbilities.textContent = currentLang === "ko" ? "불러오는 중..." : "Loading...";
   modalStatsList.innerHTML = '<div class="loader-container"><div class="pokeball-spinner"></div></div>';
   modalEvolutionChain.innerHTML = '<div class="loader-container"><div class="pokeball-spinner"></div></div>';
 
   try {
     const data = await fetchPokemonDetails(id);
-    renderModalDetails(data);
+    // Safety check: ensure modal was not closed or changed while fetching
+    if (activePokemonId === id) {
+      renderModalDetails(data);
+    }
   } catch (err) {
     console.error("Error loading modal details:", err);
-    modalPokemonDesc.textContent = "상세 정보를 가져오는 중 에러가 발생했습니다.";
+    modalPokemonDesc.textContent = currentLang === "ko" 
+      ? "상세 정보를 가져오는 중 에러가 발생했습니다." 
+      : "Error occurred loading details.";
   }
 }
 
@@ -534,48 +794,43 @@ async function fetchPokemonDetails(id) {
 function renderModalDetails(data) {
   const { pokemon, species, evolution } = data;
 
-  // Types Badges
+  // Types Badges (Localised translation)
   const badgesHtml = pokemon.types.map(t => {
-    const typeInfo = TYPE_DETAILS[t.type.name] || { ko: t.type.name, icon: "ph ph-sparkles" };
-    return `<span class="type-badge type-${t.type.name}"><i class="${typeInfo.icon}"></i> ${typeInfo.ko}</span>`;
+    const typeInfo = TYPE_DETAILS[t.type.name] || { ko: t.type.name, en: t.type.name, icon: "ph ph-sparkles" };
+    return `<span class="type-badge type-${t.type.name}"><i class="${typeInfo.icon}"></i> ${typeInfo[currentLang]}</span>`;
   }).join("");
   modalPokemonTypes.innerHTML = badgesHtml;
 
-  // Height & Weight translation (Decimeters to Meters, Hectograms to Kilograms)
+  // Height & Weight translation
   modalPokemonHeight.textContent = `${(pokemon.height / 10).toFixed(1)} m`;
   modalPokemonWeight.textContent = `${(pokemon.weight / 10).toFixed(1)} kg`;
 
-  // Abilities (PokeAPI has them in English. If we want translation, we can load them.
-  // For standard simplicity, we can fetch English abilities and capitalize them.
-  // To make it feel premium, we can fetch Korean translation if available, or fetch ability description.
-  // Let's capitalize them and list them)
+  // Abilities (Clean and format)
   const abilitiesStr = pokemon.abilities
     .map(a => a.ability.name.replace("-", " ").toUpperCase())
     .join(" / ");
   modalPokemonAbilities.textContent = abilitiesStr;
 
-  // Description / Flavor Text (Search for Korean text)
-  const koFlavorText = species.flavor_text_entries.find(entry => entry.language.name === "ko");
-  // Clean description text (remove special layout formatting characters)
-  const cleanDesc = koFlavorText 
-    ? koFlavorText.flavor_text.replace(/\f/g, " ").replace(/\n/g, " ").replace(/\r/g, " ") 
-    : "도감 설명이 존재하지 않습니다. (English description fallback: " + 
-      (species.flavor_text_entries.find(entry => entry.language.name === "en")?.flavor_text.replace(/\n/g, " ") || "") + ")";
+  // Description / Flavor Text based on language selection
+  const flavorText = species.flavor_text_entries.find(entry => entry.language.name === currentLang);
+  const cleanDesc = flavorText 
+    ? flavorText.flavor_text.replace(/\f/g, " ").replace(/\n/g, " ").replace(/\r/g, " ") 
+    : (currentLang === "ko" ? "도감 설명이 존재하지 않습니다." : "No description text exists.");
   modalPokemonDesc.textContent = cleanDesc;
 
-  // Cries Audio source configuration
+  // Audio Play button visibility check
   if (pokemon.cries && pokemon.cries.latest) {
     modalCryBtn.style.display = "flex";
   } else {
     modalCryBtn.style.display = "none";
   }
 
-  // Base Stats list rendering
+  // Base Stats list rendering (with Trading Price-up / Price-down color overrides)
   modalStatsList.innerHTML = "";
   pokemon.stats.forEach(s => {
-    const name = STAT_TRANSLATIONS[s.stat.name] || s.stat.name.toUpperCase();
+    const name = STAT_TRANSLATIONS[currentLang][s.stat.name] || s.stat.name.toUpperCase();
     const val = s.base_stat;
-    const percentage = Math.min((val / 255) * 100, 100); // base stats max is approx 255
+    const percentage = Math.min((val / 255) * 100, 100);
     
     const row = document.createElement("div");
     row.className = "stat-row";
@@ -587,13 +842,22 @@ function renderModalDetails(data) {
       </div>
     `;
     
+    const bar = row.querySelector(".stat-bar");
+    // Binance Trading Semantic Color override based on stat value strength
+    if (val >= 90) {
+      bar.classList.add("stat-high"); // Trading-up green
+    } else if (val < 50) {
+      bar.classList.add("stat-low");  // Trading-down red
+    } else {
+      bar.classList.add("stat-mid");  // Brand Yellow
+    }
+    
     modalStatsList.appendChild(row);
 
     // Staggered animate width loading
     setTimeout(() => {
-      const bar = row.querySelector(".stat-bar");
       if (bar) bar.style.width = `${percentage}%`;
-    }, 100);
+    }, 80);
   });
 
   // Evolution chain rendering
@@ -603,15 +867,16 @@ function renderModalDetails(data) {
 // Render the graphical evolution flow
 function renderEvolutionChain(evolutionData) {
   modalEvolutionChain.innerHTML = "";
+  const trans = TRANSLATIONS[currentLang];
+  
   if (!evolutionData || !evolutionData.chain) {
-    modalEvolutionChain.textContent = "진화 정보가 존재하지 않습니다.";
+    modalEvolutionChain.textContent = currentLang === "ko" ? "진화 정보가 존재하지 않습니다." : "No evolution chain found.";
     return;
   }
 
   const flowContainer = document.createElement("div");
   flowContainer.className = "evolution-chain-flow";
   
-  // Flatten tree to display nodes in sequence
   const stages = [];
   let currentLink = evolutionData.chain;
 
@@ -622,9 +887,9 @@ function renderEvolutionChain(evolutionData) {
     const urlParts = link.species.url.split('/');
     const id = parseInt(urlParts[urlParts.length - 2]);
     
-    // Find preloaded names
+    // Find preloaded names and types
     const preInfo = pokemonList.find(p => p.id === id);
-    const name = preInfo ? preInfo.ko : link.species.name;
+    const name = preInfo ? preInfo[currentLang] : link.species.name;
     const types = preInfo ? preInfo.types : ["normal"];
 
     // Find trigger details
@@ -632,47 +897,43 @@ function renderEvolutionChain(evolutionData) {
     if (link.evolution_details && link.evolution_details.length > 0) {
       const details = link.evolution_details[0];
       if (details.min_level) {
-        trigger = `Lv.${details.min_level}`;
+        trigger = `${trans.evoTrigger.level}${details.min_level}`;
       } else if (details.item) {
-        // Translation for items if possible, otherwise capitalise
-        trigger = details.item.name.replace("-", " ").toUpperCase();
+        const itemName = details.item.name.replace("-", " ").toUpperCase();
+        trigger = itemName;
       } else if (details.min_happiness) {
-        trigger = "친밀도";
+        trigger = trans.evoTrigger.happiness;
       } else if (details.time_of_day) {
-        trigger = details.time_of_day === "day" ? "낮" : "밤";
+        const timeStr = details.time_of_day === "day" ? trans.evoTrigger.timeDay : trans.evoTrigger.timeNight;
+        trigger = timeStr;
       } else if (details.location) {
-        trigger = "특정 장소";
+        trigger = trans.evoTrigger.location;
       } else if (details.known_move) {
-        trigger = "특정 기술 습득";
+        trigger = trans.evoTrigger.move;
       } else {
-        trigger = "진화";
+        trigger = trans.evoTrigger.evolve;
       }
     }
 
     stages.push({ id, name, types, trigger });
 
-    // Handles simple lines, for branches like Eevee we just follow the first branch for sequencing 
-    // but we can add arrows for additional branches.
+    // Handle branching evolution lines
     if (link.evolves_to && link.evolves_to.length > 0) {
-      // If there are multiple branches, we traverse each.
-      // For standard display, let's build branching groups
       if (link.evolves_to.length > 1) {
-        // Multi branch evolution (like Eevee, Tyrogue, Wurmple)
         const branches = link.evolves_to.map(child => {
           const childUrlParts = child.species.url.split('/');
           const childId = parseInt(childUrlParts[childUrlParts.length - 2]);
           const childPre = pokemonList.find(p => p.id === childId);
           
-          let childTrigger = "진화";
+          let childTrigger = trans.evoTrigger.evolve;
           if (child.evolution_details && child.evolution_details.length > 0) {
             const details = child.evolution_details[0];
-            if (details.min_level) childTrigger = `Lv.${details.min_level}`;
+            if (details.min_level) childTrigger = `${trans.evoTrigger.level}${details.min_level}`;
             else if (details.item) childTrigger = details.item.name.replace("-", " ").toUpperCase();
-            else if (details.held_item) childTrigger = `도구 장착`;
           }
           return {
             id: childId,
-            name: childPre ? childPre.ko : child.species.name,
+            name: childPre ? childPre[currentLang] : child.species.name,
             types: childPre ? childPre.types : ["normal"],
             trigger: childTrigger
           };
@@ -688,7 +949,6 @@ function renderEvolutionChain(evolutionData) {
 
   // Render HTML based on collected stages
   stages.forEach((stage, idx) => {
-    // If it's a branch group
     if (stage.isBranch) {
       const branchWrapper = document.createElement("div");
       branchWrapper.style.display = "flex";
@@ -699,7 +959,7 @@ function renderEvolutionChain(evolutionData) {
         const row = document.createElement("div");
         row.style.display = "flex";
         row.style.alignItems = "center";
-        row.style.gap = "12px";
+        row.style.gap = "8px";
 
         const arrow = document.createElement("div");
         arrow.className = "evo-arrow";
@@ -712,11 +972,10 @@ function renderEvolutionChain(evolutionData) {
       });
       flowContainer.appendChild(branchWrapper);
     } else {
-      // Normal node
       if (idx > 0) {
         const arrow = document.createElement("div");
         arrow.className = "evo-arrow";
-        arrow.innerHTML = `<i class="ph ph-arrow-right"></i><span class="evo-trigger">${stage.trigger || "진화"}</span>`;
+        arrow.innerHTML = `<i class="ph ph-arrow-right"></i><span class="evo-trigger">${stage.trigger || trans.evoTrigger.evolve}</span>`;
         flowContainer.appendChild(arrow);
       }
       const node = createEvoNode(stage);
@@ -727,7 +986,7 @@ function renderEvolutionChain(evolutionData) {
   modalEvolutionChain.appendChild(flowContainer);
 }
 
-// Helper to create click-active evolution card nodes
+// Create click-navigable evolution card nodes
 function createEvoNode(stage) {
   const node = document.createElement("div");
   node.className = "evo-node";
@@ -740,7 +999,6 @@ function createEvoNode(stage) {
     <span class="evo-name">${stage.name}</span>
   `;
 
-  // Make evolution nodes clickable to navigate directly inside the modal
   node.addEventListener("click", (e) => {
     e.stopPropagation();
     openDetailModal(stage.id);
@@ -765,7 +1023,7 @@ async function playPokemonCry() {
 
   modalCryBtn.classList.add("cry-playing");
   currentAudio = new Audio(cryUrl);
-  currentAudio.volume = 0.45; // slightly lower volume for safety
+  currentAudio.volume = 0.45;
 
   currentAudio.addEventListener("ended", () => {
     modalCryBtn.classList.remove("cry-playing");

@@ -1,6 +1,6 @@
-# 🌌 PokéVerse - Binance Style Pokédex
+# 🌌 PokéVerse - 포켓버스 Pokédex (포켓몬도감)
 
-**PokéVerse(포켓버스)**는 모던하고 시각적으로 뛰어난 바이낸스(Binance) 금융 거래소 스타일의 웹 기반 포켓몬 도감입니다. 
+**PokéVerse(포켓버스)**는 모던하고 시각적으로 뛰어난 웹 기반 포켓몬 도감입니다. 
 Pure HTML, CSS, JavaScript로 개발되었으며, 실시간으로 한국어와 영어 인터페이스를 토글할 수 있는 다국어 기능을 지원합니다.
 
 👉 **라이브 데모 사이트**: [https://2652036.github.io/pokeverse-pokedex/](https://2652036.github.io/pokeverse-pokedex/)  

@@ -1,0 +1,17 @@
+{
+  "name": "pokeverse-pokedex",
+  "version": "1.0.0",
+  "description": "A premium glassmorphic Pokemon Pokedex web application",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server . -p 8000"
+  },
+  "keywords": [
+    "pokemon",
+    "pokedex",
+    "glassmorphism",
+    "pokeapi"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}

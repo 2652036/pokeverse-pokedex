@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéVerse - 프리미엄 포켓몬 도감</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Phosphor Icons -->
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/css/phosphor.css" />
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Header Section -->
+  <header class="header glass-panel">
+    <div class="logo-container">
+      <div class="pokeball-icon-wrapper">
+        <i class="ph ph-pokeball-logo pokeball-loading-icon"></i>
+      </div>
+      <h1 class="logo-text">POKÉ<span>VERSE</span></h1>
+    </div>
+    <div class="stats-counter glass-panel">
+      <i class="ph ph-hash"></i>
+      <span id="registered-count">0</span> / 1025
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Controls Section: Search & Filters -->
+    <section class="controls-section glass-panel">
+      <!-- Search Input -->
+      <div class="search-wrapper">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" placeholder="이름 또는 도감 번호 검색..." autocomplete="off">
+        <button id="clear-search" class="clear-search-btn hidden">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <!-- Filters Row -->
+      <div class="filter-options-row">
+        <!-- Type Filter Selector -->
+        <div class="dropdown-filter" id="type-filter-container">
+          <button class="filter-select-btn glass-panel" id="type-select-btn">
+            <span class="btn-content"><i class="ph ph-sparkles"></i> 모든 타입</span>
+            <i class="ph ph-caret-down caret"></i>
+          </button>
+          <div class="dropdown-menu glass-panel hidden" id="type-dropdown-menu">
+            <!-- Dynamically populated type options -->
+          </div>
+        </div>
+
+        <!-- Generation Filter Selector -->
+        <div class="dropdown-filter" id="gen-filter-container">
+          <button class="filter-select-btn glass-panel" id="gen-select-btn">
+            <span class="btn-content"><i class="ph ph-globe-hemisphere-east"></i> 모든 세대</span>
+            <i class="ph ph-caret-down caret"></i>
+          </button>
+          <div class="dropdown-menu glass-panel hidden" id="gen-dropdown-menu">
+            <div class="dropdown-item active" data-gen="all">모든 세대</div>
+            <div class="dropdown-item" data-gen="1">제1세대 (관동)</div>
+            <div class="dropdown-item" data-gen="2">제2세대 (성도)</div>
+            <div class="dropdown-item" data-gen="3">제3세대 (호연)</div>
+            <div class="dropdown-item" data-gen="4">제4세대 (신오)</div>
+            <div class="dropdown-item" data-gen="5">제5세대 (하나)</div>
+            <div class="dropdown-item" data-gen="6">제6세대 (칼로스)</div>
+            <div class="dropdown-item" data-gen="7">제7세대 (알로라)</div>
+            <div class="dropdown-item" data-gen="8">제8세대 (가라르)</div>
+            <div class="dropdown-item" data-gen="9">제9세대 (팔데아)</div>
+          </div>
+        </div>
+
+        <!-- Sorting Selector -->
+        <div class="dropdown-filter" id="sort-filter-container">
+          <button class="filter-select-btn glass-panel" id="sort-select-btn">
+            <span class="btn-content"><i class="ph ph-sort-ascending"></i> 번호 순 (오름차순)</span>
+            <i class="ph ph-caret-down caret"></i>
+          </button>
+          <div class="dropdown-menu glass-panel hidden" id="sort-dropdown-menu">
+            <div class="dropdown-item active" data-sort="id-asc">번호 순 (오름차순)</div>
+            <div class="dropdown-item" data-sort="id-desc">번호 순 (내림차순)</div>
+            <div class="dropdown-item" data-sort="name-asc">이름 순 (ㄱ-ㅎ)</div>
+            <div class="dropdown-item" data-sort="name-desc">이름 순 (ㅎ-ㄱ)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pokemon Grid Container -->
+    <section class="grid-section">
+      <div id="pokedex-grid" class="pokedex-grid">
+        <!-- Cards dynamically injected here -->
+      </div>
+
+      <!-- Scroll sentinel / Loading Spinner -->
+      <div id="loader" class="loader-container hidden">
+        <div class="pokeball-spinner"></div>
+        <p>포켓몬 데이터를 불러오는 중...</p>
+      </div>
+
+      <!-- No Results Message -->
+      <div id="no-results" class="no-results-container hidden">
+        <i class="ph ph-smiley-sad warning-icon"></i>
+        <h3>검색 결과가 없습니다.</h3>
+        <p>이름이나 도감 번호를 올바르게 입력했는지 확인해 주세요.</p>
+        <button id="reset-filters-btn" class="reset-btn glass-panel">필터 초기화</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Immersive Detail Modal -->
+  <div id="detail-modal" class="modal-overlay hidden">
+    <div class="modal-container glass-panel">
+      <!-- Top actions / close -->
+      <div class="modal-header">
+        <button id="modal-prev-btn" class="modal-nav-btn glass-panel" title="이전 포켓몬">
+          <i class="ph ph-arrow-left"></i>
+        </button>
+        <div class="modal-header-info">
+          <span id="modal-pokemon-id" class="pokemon-id">#0001</span>
+          <h2 id="modal-pokemon-name" class="pokemon-name">포켓몬 이름</h2>
+        </div>
+        <div class="modal-header-actions">
+          <button id="modal-cry-btn" class="modal-action-btn glass-panel" title="울음소리 듣기">
+            <i class="ph ph-speaker-high"></i>
+          </button>
+          <button id="modal-close-btn" class="modal-action-btn glass-panel close-btn" title="닫기">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-content">
+        <!-- Left Side: Image & Types -->
+        <div class="modal-visuals-col">
+          <div class="modal-image-wrapper">
+            <div class="modal-type-bg-glow" id="modal-glow-layer"></div>
+            <img id="modal-pokemon-img" src="" alt="포켓몬 이미지" class="modal-pokemon-img">
+          </div>
+          <div id="modal-pokemon-types" class="pokemon-types-container">
+            <!-- Badge elements -->
+          </div>
+          <p id="modal-pokemon-desc" class="pokemon-description-text">
+            포켓몬의 도감 설명 텍스트입니다. API에서 제공하는 한국어 설명을 파싱하여 이곳에 렌더링하게 됩니다.
+          </p>
+        </div>
+
+        <!-- Right Side: Detailed Stats & Evolutions -->
+        <div class="modal-stats-col">
+          <!-- Quick Info Cards -->
+          <div class="quick-info-grid">
+            <div class="info-card glass-panel">
+              <i class="ph ph-arrows-out-cardinal"></i>
+              <div class="info-val" id="modal-pokemon-height">1.0 m</div>
+              <div class="info-label">키 (Height)</div>
+            </div>
+            <div class="info-card glass-panel">
+              <i class="ph ph-scales"></i>
+              <div class="info-val" id="modal-pokemon-weight">10.0 kg</div>
+              <div class="info-label">몸무게 (Weight)</div>
+            </div>
+            <div class="info-card glass-panel">
+              <i class="ph ph-lightning"></i>
+              <div class="info-val" id="modal-pokemon-abilities">심록</div>
+              <div class="info-label">특성 (Abilities)</div>
+            </div>
+          </div>
+
+          <!-- Base Stats Section -->
+          <div class="stats-section glass-panel">
+            <h3 class="section-title"><i class="ph ph-chart-bar"></i> 기본 능력치 (Base Stats)</h3>
+            <div class="stats-list" id="modal-stats-list">
+              <!-- Stat rows will be dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Evolution Chain Section -->
+          <div class="evolution-section glass-panel">
+            <h3 class="section-title"><i class="ph ph-tree-structure"></i> 진화 과정 (Evolution Chain)</h3>
+            <div class="evolution-chain-flow" id="modal-evolution-chain">
+              <!-- Evolution node links -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom script file -->
+  <script src="app.js"></script>
+</body>
+</html>
